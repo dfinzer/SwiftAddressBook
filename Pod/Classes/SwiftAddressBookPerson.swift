@@ -57,7 +57,7 @@ public class SwiftAddressBookPerson : SwiftAddressBookRecord {
 	//MARK: Personal Information
 
 	public func setImage(image : UIImage) -> CFError? {
-		let imageData : NSData = UIImagePNGRepresentation(image)
+		let imageData : NSData = UIImagePNGRepresentation(image)!
 		return errorIfNoSuccess { ABPersonSetImageData(self.internalRecord,  CFDataCreate(nil, UnsafePointer(imageData.bytes), imageData.length), $0) }
 	}
 
@@ -105,7 +105,10 @@ public class SwiftAddressBookPerson : SwiftAddressBookRecord {
 
 	public var compositeName : String? {
 		get {
-			return ABRecordCopyCompositeName(internalRecord)?.takeRetainedValue() as? String
+            if let val = ABRecordCopyCompositeName(internalRecord)?.takeRetainedValue() as! String? {
+                return val
+            }
+            return nil
 		}
 	}
 
@@ -364,24 +367,29 @@ public class SwiftAddressBookPerson : SwiftAddressBookRecord {
 		ABRecordSetValue(self.internalRecord, key, value, nil)
 	}
 
-	private func extractMultivalueProperty<T>(propertyName : ABPropertyID) -> Array<MultivalueEntry<T>>? {
-		var array = Array<MultivalueEntry<T>>()
-		let multivalue : ABMultiValue? = extractProperty(propertyName)
-		for i : Int in 0..<(ABMultiValueGetCount(multivalue)) {
-			let value : T? = ABMultiValueCopyValueAtIndex(multivalue, i).takeRetainedValue() as? T
-			if let v : T = value {
-				let id : Int = Int(ABMultiValueGetIdentifierAtIndex(multivalue, i))
-				let label = ABMultiValueCopyLabelAtIndex(multivalue, i)?.takeRetainedValue() as? String
-				array.append(MultivalueEntry(value: v, label: label, id: id))
-			}
-		}
-		if array.count > 0 {
-			return array
-		}
-		else {
-			return nil
-		}
-	}
+    private func extractMultivalueProperty<T>(propertyName : ABPropertyID) -> Array<MultivalueEntry<T>>? {
+        var array = Array<MultivalueEntry<T>>()
+        let multivalue : ABMultiValue? = extractProperty(propertyName)
+        for i : Int in 0..<(ABMultiValueGetCount(multivalue)) {
+            let value : T? = ABMultiValueCopyValueAtIndex(multivalue, i).takeRetainedValue() as? T
+            if let v : T = value {
+                let id : Int = Int(ABMultiValueGetIdentifierAtIndex(multivalue, i))
+                
+                var label = ""
+                if let val = ABMultiValueCopyLabelAtIndex(multivalue, i) {
+                    label = val.takeRetainedValue() as String
+                }
+                
+                array.append(MultivalueEntry(value: v, label: label, id: id))
+            }
+        }
+        if array.count > 0 {
+            return array
+        }
+        else {
+            return nil
+        }
+    }
 
 	private func extractMultivalueDictionaryProperty<T : NSCopying, U, V, W>(propertyName : ABPropertyID, keyConverter : (T) -> V, valueConverter : (U) -> W ) -> Array<MultivalueEntry<Dictionary<V, W>>>? {
 
@@ -474,11 +482,11 @@ public class SwiftAddressBookPerson : SwiftAddressBookRecord {
 		}
 
 		for m : MultivalueEntry in multivalue! {
-			if contains(identifiers, m.id) {
+			if identifiers.contains(m.id) {
 				let index = ABMultiValueGetIndexForIdentifier(abMultivalue, Int32(m.id))
 				ABMultiValueReplaceValueAtIndex(abMultivalue, m.value, index)
 				ABMultiValueReplaceLabelAtIndex(abMultivalue, m.label, index)
-				identifiers.removeAtIndex(find(identifiers,m.id)!)
+				identifiers.removeAtIndex(identifiers.indexOf(m.id)!)
 			}
 			else {
 				ABMultiValueAddValueAndLabel(abMultivalue, m.value, m.label, nil)

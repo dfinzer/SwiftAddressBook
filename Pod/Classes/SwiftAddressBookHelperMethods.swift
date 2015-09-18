@@ -49,8 +49,9 @@ func convertRecordsToGroups(records : CFArray?) -> [SwiftAddressBookGroup]? {
 }
 
 func convertRecordsToPersons(records : CFArray?) -> [SwiftAddressBookPerson]? {
-	let swiftRecords = (records as? [ABRecord])?.map {(record : ABRecord) -> SwiftAddressBookPerson in
-		return SwiftAddressBookRecord.from(record) as! SwiftAddressBookPerson
-	}
-	return swiftRecords
+    let swiftRecords = (records! as? [ABRecord])?.map {
+        (record : ABRecord) -> SwiftAddressBookPerson in
+        return SwiftAddressBookPerson(record: record)
+    }
+    return swiftRecords
 }
